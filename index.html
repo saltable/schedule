@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gokigenote</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+<body>
+
+    <header>
+        <h1>Gokigenote</h1>
+    </header>
+
+    <main class="container">
+        <section class="calendar-container">
+            <div class="calendar-header">
+                <div class="view-switcher" id="view-switcher">
+                    <button data-view="year">年</button>
+                    <button data-view="month" class="active">月</button>
+                    <button data-view="week">週</button>
+                </div>
+                <div class="calendar-controls">
+                    <button id="prev-btn">＜</button>
+                    <h3 id="view-title"></h3>
+                    <button id="next-btn">＞</button>
+                </div>
+            </div>
+            <div id="calendar-display"></div> <button id="add-event-btn" class="main-action-btn">
+                <i class="fa-solid fa-plus"></i> 楽しみを予約する
+            </button>
+        </section>
+
+        <section class="timeline-container">
+            <h2><i class="fa-solid fa-scroll"></i> 思い出タイムライン</h2>
+            <div id="timeline">
+                <p class="placeholder-text">まだ思い出はありません。</p>
+            </div>
+        </section>
+    </main>
+
+    <div id="event-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h3 id="event-modal-title">楽しみな予定（ごきげん）を予約</h3>
+            <form id="event-form">
+                <input type="hidden" id="event-id">
+                <label for="event-title">タイトル</label>
+                <input type="text" id="event-title" placeholder="例：〇〇のライブ！" required>
+                <label for="event-date">日付</label>
+                <input type="date" id="event-date" required>
+                <label for="event-category">カテゴリ</label>
+                <select id="event-category" required>
+                    <option value="live">ライブ・イベント</option>
+                    <option value="cafe">カフェ巡り</option>
+                    <option value="travel">旅行</option>
+                    <option value="movie">映画</option>
+                    <option value="special">特別な日</option>
+                    <option value="other">その他</option>
+                </select>
+                <div class="form-actions">
+                    <button type="submit" id="save-event-btn" class="save-btn">この内容で予約する</button>
+                    <button type="button" id="delete-event-btn" class="delete-btn">この予定を削除</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="memory-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h3 id="memory-modal-title">思い出を記録しよう</h3>
+            <div class="ai-dialogue">
+                <p class="ai-message">
+                    <i class="fa-solid fa-robot"></i>
+                    <span id="ai-message-text"></span>
+                </p>
+            </div>
+            <form id="memory-form">
+                <textarea id="memory-text" rows="6" placeholder="AIへの返事のように、自由に気持ちを書き出してみよう…"></textarea>
+                <input type="hidden" id="memory-event-id">
+                <button type="submit">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> スクラップブックを作成
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
