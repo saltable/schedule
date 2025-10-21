@@ -28,7 +28,10 @@
                     <button id="next-btn">＞</button>
                 </div>
             </div>
-            <div id="calendar-display"></div> <button id="add-event-btn" class="main-action-btn">
+            
+            <div id="calendar-display"></div>
+
+            <button id="add-event-btn" class="main-action-btn">
                 <i class="fa-solid fa-plus"></i> 楽しみを予約する
             </button>
         </section>
@@ -49,8 +52,18 @@
                 <input type="hidden" id="event-id">
                 <label for="event-title">タイトル</label>
                 <input type="text" id="event-title" placeholder="例：〇〇のライブ！" required>
-                <label for="event-date">日付</label>
-                <input type="date" id="event-date" required>
+                
+                <div class="form-row">
+                    <div>
+                        <label for="event-date">日付</label>
+                        <input type="date" id="event-date" required>
+                    </div>
+                    <div>
+                        <label for="event-time">時刻 (任意)</label>
+                        <input type="time" id="event-time">
+                    </div>
+                </div>
+
                 <label for="event-category">カテゴリ</label>
                 <select id="event-category" required>
                     <option value="live">ライブ・イベント</option>
@@ -79,15 +92,23 @@
                 </p>
             </div>
             <form id="memory-form">
+                <label for="memory-text">AIとの対話</label>
                 <textarea id="memory-text" rows="6" placeholder="AIへの返事のように、自由に気持ちを書き出してみよう…"></textarea>
+                
+                <label for="memory-photo">写真を追加</label>
+                <input type="file" id="memory-photo" accept="image/*">
+                <img id="photo-preview" class="photo-preview" src="" alt="写真のプレビュー">
+
                 <input type="hidden" id="memory-event-id">
-                <button type="submit">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i> スクラップブックを作成
-                </button>
+                <div class="form-actions">
+                    <button type="submit" class="save-btn">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> スクラップブックを作成
+                    </button>
+                    <button type="button" id="delete-memory-btn" class="delete-btn">この予定を削除</button>
+                </div>
             </form>
         </div>
     </div>
-
     <script src="script.js"></script>
 </body>
 </html>
