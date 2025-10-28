@@ -95,9 +95,9 @@
                 <label for="memory-text">AIとの対話</label>
                 <textarea id="memory-text" rows="6" placeholder="AIへの返事のように、自由に気持ちを書き出してみよう…"></textarea>
                 
-                <label for="memory-photo">写真を追加</label>
-                <input type="file" id="memory-photo" accept="image/*">
-                <img id="photo-preview" class="photo-preview" src="" alt="写真のプレビュー">
+                <label for="memory-photo">写真を追加 (複数選択可)</label>
+                <input type="file" id="memory-photo" accept="image/*" multiple> 
+                <div id="photo-previews" class="photo-previews-container"></div> 
 
                 <input type="hidden" id="memory-event-id">
                 <div class="form-actions">

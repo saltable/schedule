@@ -16,13 +16,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const deleteEventBtn = document.getElementById('delete-event-btn');
     const deleteMemoryBtn = document.getElementById('delete-memory-btn');
     const memoryPhotoInput = document.getElementById('memory-photo');
-    const photoPreview = document.getElementById('photo-preview');
+    const photoPreviewsContainer = document.getElementById('photo-previews');
+    const memoryTextInput = document.getElementById('memory-text');
+    const aiDialogueElement = memoryModal.querySelector('.ai-dialogue');
 
     // --- 状態管理 ---
     let currentDate = new Date();
     let currentView = 'month';
     let events = JSON.parse(localStorage.getItem('gokigenEvents')) || [];
-    let resizedPhotoDataUrl = null; // リサイズ後の写真データを一時的に保持
+    let currentPhotoDataUrls = []; // リサイズ後の写真データURL(複数)を一時的に保持
+
+    // --- データ移行処理 (古い形式のデータを新しい形式に変換) ---
+    events = events.map(event => {
+        if (event.photoDataUrl && !event.photoDataUrls) {
+            event.photoDataUrls = [event.photoDataUrl];
+            delete event.photoDataUrl;
+        } else if (!event.photoDataUrls) {
+            event.photoDataUrls = [];
+        }
+        return event;
+    });
+    // saveEvents(); // 初期読み込み後に1回保存
 
     const saveEvents = () => localStorage.setItem('gokigenEvents', JSON.stringify(events));
 
@@ -33,6 +47,108 @@ document.addEventListener('DOMContentLoaded', () => {
         movie: { icon: 'fa-film', name: '映画'},
         special: { icon: 'fa-star', name: '特別な日'},
         other: { icon: 'fa-pencil', name: 'その他'}
+    };
+
+    // --- 質問セットの定義 ---
+    const questionSets = {
+        common: [
+            "おかえりなさい！ 今日の『ごきげん体験』、どうでしたか？ 今の率直なキモチを、一言で教えてください！",
+            "その体験に、ハッシュタグをつけるとしたら？ (例: #最高すぎた #感動 #リフレッシュ)",
+            "今日の体験の「満足度」を星5つで表すとしたら？ (★★★★★)",
+            "今日のハイライトを一言でまとめるなら？",
+            "誰と一緒でしたか？ もし一人なら、どんな気分でしたか？",
+            "今日の体験で、一番心に残った「瞬間」を教えてください。",
+            "何か素敵な写真は撮れましたか？",
+            "今日の体験を、未来の自分に伝えるとしたら、まず何を伝えますか？",
+        ],
+        live: [
+            "ライブ、最高でしたか？ 今の興奮を言葉にしてください！",
+            "今日のライブにハッシュタグをつけるなら？ (例: #神セトリ #推しが尊い #〇〇しか勝たん)",
+            "一番テンションが上がった曲、パフォーマンスは何でしたか？",
+            "思わず泣いてしまった、感動したシーンはありましたか？",
+            "今日のアーティスト（推し）の様子はどうでしたか？",
+            "MC（トーク）で印象に残った言葉はありましたか？",
+            "セットリスト全体を通して、どう思いましたか？",
+            "会場の雰囲気や、周りのファンの盛り上がりはどうでしたか？",
+            "席からの眺め（近さ、見え方）はどうでしたか？",
+            "一番耳に残っている「音」や「フレーズ」は何ですか？",
+            "照明や演出（映像、特効など）で記憶に残っているものは？",
+            "「今日のこの曲はいつもと違った！」という発見はありましたか？",
+            "サプライズな演出やハプニングはありましたか？",
+            "予想外に良かった曲、化けた曲はありましたか？",
+            "買ったグッズはありますか？ 一番のお気に入りは？",
+            "今日のライブ、100点満点で何点ですか？",
+            "次のライブやイベントにも絶対行きたいと思いましたか？",
+            "今日の感動を、誰かに一番伝えたいですか？",
+            "この日のために頑張ってきてよかったですか？",
+            "ライブが終わった今、一番食べたいもの・飲みたいものは何ですか？",
+            "今日の思い出を、一言で未来の自分に叫んでください！",
+        ],
+        cafe: [
+            "カフェ（グルメ）でのひととき、いかがでしたか？ 今の「ほっこり度」や「満足度」を教えてください。",
+            "そのカフェ（お店）体験にハッシュタグをつけるなら？ (例: #隠れ家カフェ #スイーツ最高 #リピ確定)",
+            "今日注文したメニューで、一番「当たり！」だったものは何ですか？",
+            "メインで頼んだドリンクやフードの、率直な感想をどうぞ！",
+            "味はどうでしたか？（例：甘かった、本格的だった、優しい味）",
+            "見た目（盛り付けや食器）はどうでしたか？",
+            "お店の雰囲気やインテリア、内装はどうでしたか？",
+            "どんな香りがしましたか？（例：コーヒーの香り、焼き菓子の甘い香り）",
+            "店内に流れていた音楽や、聞こえてきた音で印象に残ったものは？",
+            "席の座り心地や、窓からの景色はどうでしたか？",
+            "店員さんの接客やサービスで印象に残ったことはありますか？",
+            "このお店の「一番好きなところ」はどこですか？",
+            "メニューやお店のシステムで、何か新しい発見はありましたか？",
+            "「これは珍しい！」と思ったメニューや食材はありましたか？",
+            "誰とどんな話をしましたか？",
+            "そこでどんな時間を過ごしましたか？（例：読書、おしゃべり、ぼーっとした）",
+            "このカフェ（お店）、リピートしたい度は星いくつ？ (★★★★★)",
+            "次に来たら注文してみたい、気になるメニューはありましたか？",
+            "今日のカフェタイムを、一言でまとめるなら？",
+        ],
+        travel: [
+            "おかえりなさい！旅行（お出かけ）はどうでしたか？ 今の気分を天気で例えるなら？（例：快晴！）",
+            "今回の旅にハッシュタグをつけるなら？ (例: #絶景 #食べ歩き #リフレッシュ #ノープラン旅)",
+            "旅全体で、一番「ここに来てよかった！」と思った場所はどこですか？",
+            "旅のハイライトシーン、ベストショットの瞬間を教えてください。",
+            "最も心に残っている景色は、どんな風景ですか？",
+            "旅先で食べたもので、一番「うまい！」と唸ったものは何ですか？",
+            "「これは珍しい！」と思った食べ物や飲み物はありましたか？",
+            "どんな体験をしましたか？（例：温泉、アクティビティ、史跡巡り、買い物）",
+            "その土地の雰囲気や、出会った人々はどうでしたか？",
+            "その土地ならではの文化や習慣、言葉に触れましたか？",
+            "旅先で印象に残った「音」や「匂い」はありますか？",
+            "旅の途中で、何か予想外のハプニングやラッキーな出来事はありましたか？",
+            "行く前と後で、その場所へのイメージは変わりましたか？",
+            "泊まった宿（ホテル・旅館）はどうでしたか？ 快適でしたか？",
+            "自分や誰かのために、お土産は何か買いましたか？",
+            "一緒に行った人との、旅の一番の思い出は何ですか？",
+            "今回の旅の満足度を、100点満点で教えてください！",
+            "次に訪れるなら、どこで何をしたいですか？",
+            "この旅の経験を、未来の自分にどう活かしたいですか？",
+            "旅の思い出を、一言でまとめると？",
+        ],
+        movie: [
+            "映画鑑賞、お疲れ様です！作品、どうでしたか？",
+            "見終わった直後の、率直な感想を一言でお願いします！",
+            "その映画にハッシュタグをつけるなら？ (例: #号泣 #考察が止まらない #最高の時間)",
+            "一番心に残った、お気に入りのシーンはどこですか？",
+            "思わず息をのんだり、鳥肌が立った瞬間はありましたか？",
+            "ストーリー全体について、どう思いましたか？",
+            "結末（エンディング）は予想通りでしたか？ それとも意外でしたか？",
+            "一番好きになったキャラクター、または感情移入したキャラクターは誰ですか？",
+            "そのキャラクターのどんなところに惹かれましたか？",
+            "映像美やカメラワーク、演出で特に印象的だったところは？",
+            "音楽（BGMや主題歌）は映画の雰囲気と合っていましたか？",
+            "この映画のテーマや、監督が伝えたかったメッセージは何だと思いましたか？",
+            "一番驚いた展開や、見事な伏線回収はありましたか？",
+            "見る前と後で、作品の印象は変わりましたか？",
+            "映画館の雰囲気（音響や座席）はどうでしたか？",
+            "ポップコーンやドリンクは楽しみましたか？ 何味でしたか？",
+            "この映画、個人的な満足度は星いくつ？ (★★★★★)",
+            "この作品を、他の人にもお勧めしたいですか？",
+            "もしもう一度見るとしたら、今度はどこに注目して見たいですか？",
+            "この映画から受け取った「一番大切なもの」を一言でまとめるなら？",
+        ],
     };
 
     // --- メイン描画関数 ---
@@ -197,14 +313,24 @@ document.addEventListener('DOMContentLoaded', () => {
             const item = document.createElement('div');
             item.className = 'timeline-item';
             const timeDisplay = event.time ? ` ${event.time}` : '';
-            const photoDisplay = event.photoDataUrl ? `<img src="${event.photoDataUrl}" alt="${event.title}の写真" class="scrapbook-photo">` : '';
+            let photosHtml = '';
+            if (event.photoDataUrls && event.photoDataUrls.length > 0) {
+                photosHtml = '<div class="scrapbook-photos-container">';
+                event.photoDataUrls.forEach(url => {
+                    photosHtml += `<img src="${url}" alt="${event.title}の写真" class="scrapbook-photo">`;
+                });
+                photosHtml += '</div>';
+            }
+            // Q&A形式で表示するために memory の改行を <br> に変換
+            const memoryDisplay = event.memory ? event.memory.replace(/\n/g, '<br>') : '';
+
             item.innerHTML = `
                 <div class="scrapbook-card">
                     <button class="delete-scrapbook-btn" data-event-id="${event.id}">&times;</button>
-                    ${photoDisplay}
+                    ${photosHtml}
                     <h4><i class="fa-solid ${categories[event.category].icon}"></i> ${event.title}</h4>
                     <p class="date">${event.date}${timeDisplay}</p>
-                    <p class="memory">${event.memory.replace(/\n/g, '<br>')}</p>
+                    <p class="memory">${memoryDisplay}</p>
                     <button class="share-btn" onclick="alert('「一枚の画像として書き出し」が実行されました！')">
                         <i class="fa-solid fa-share-square"></i> この思い出をシェア
                     </button>
@@ -247,51 +373,94 @@ document.addEventListener('DOMContentLoaded', () => {
     const openMemoryModal = (eventId) => {
         const event = events.find(e => e.id === eventId);
         if (!event) return;
-        const aiMessages = [`「${event.title}」はどうだった？`, `昨日の「${event.title}」、楽しめたみたいだね！`, `「${event.title}」の思い出を聞かせて！`];
-        document.getElementById('ai-message-text').textContent = aiMessages[Math.floor(Math.random() * aiMessages.length)];
+
+        const introMessages = [`「${event.title}」はどうだった？`, `昨日の「${event.title}」、楽しめたみたいだね！`, `「${event.title}」の思い出を聞かせて！`];
+        document.getElementById('ai-message-text').textContent = introMessages[Math.floor(Math.random() * introMessages.length)];
+        aiDialogueElement.style.display = 'block';
+
         document.getElementById('memory-modal-title').textContent = `「${event.title}」の思い出`;
         document.getElementById('memory-event-id').value = eventId;
         deleteMemoryBtn.dataset.eventId = event.id;
         memoryForm.reset();
-        photoPreview.src = '';
+        photoPreviewsContainer.innerHTML = '';
         memoryPhotoInput.value = '';
-        resizedPhotoDataUrl = null;
+        currentPhotoDataUrls = [];
+
+        memoryTextInput.style.display = 'none'; // 元のテキストエリア非表示
+        memoryTextInput.value = '';
+
+        // QAコンテナの準備
+        const existingQaContainer = memoryForm.querySelector('#qa-container');
+        if (existingQaContainer) memoryForm.removeChild(existingQaContainer); // 既存を削除
+        const qaContainer = document.createElement('div');
+        qaContainer.id = 'qa-container';
+
+        // 質問の選択
+        let questions = [...questionSets.common];
+        if (questionSets[event.category]) {
+            questions = questions.concat(questionSets[event.category]);
+        }
+
+        // Q&Aフォームの生成
+        questions.forEach((question, index) => {
+            const questionId = `q-${eventId}-${index}`;
+            const label = document.createElement('label');
+            label.htmlFor = questionId;
+            label.textContent = question;
+            const textarea = document.createElement('textarea');
+            textarea.id = questionId;
+            textarea.rows = 2;
+            textarea.placeholder = '自由に書いてね';
+            textarea.dataset.question = question;
+            qaContainer.appendChild(label);
+            qaContainer.appendChild(textarea);
+        });
+
+        // フォームに挿入
+        memoryForm.insertBefore(qaContainer, memoryPhotoInput.labels[0] || memoryPhotoInput);
+
         openModal(memoryModal);
     };
+
     modals.forEach(modal => modal.querySelector('.close-btn').addEventListener('click', () => closeModal(modal)));
 
-    // --- 写真プレビューとリサイズ処理 ---
+    // --- 写真プレビューとリサイズ処理 (複数ファイル対応) ---
     memoryPhotoInput.addEventListener('change', () => {
-        const file = memoryPhotoInput.files[0];
-        if (!file) {
-            photoPreview.src = '';
-            resizedPhotoDataUrl = null;
-            return;
-        }
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const img = new Image();
-            img.onload = () => {
-                const MAX_WIDTH = 800;
-                const MAX_HEIGHT = 800;
-                let width = img.width;
-                let height = img.height;
-                if (width > height) {
-                    if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
-                } else {
-                    if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
-                }
-                const canvas = document.createElement('canvas');
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
-                resizedPhotoDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-                photoPreview.src = resizedPhotoDataUrl;
+        photoPreviewsContainer.innerHTML = '';
+        currentPhotoDataUrls = [];
+        const files = memoryPhotoInput.files;
+        if (!files || files.length === 0) return;
+
+        Array.from(files).forEach(file => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const MAX_WIDTH = 800;
+                    const MAX_HEIGHT = 800;
+                    let width = img.width;
+                    let height = img.height;
+                    if (width > height) {
+                        if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+                    } else {
+                        if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+                    }
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    const resizedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                    currentPhotoDataUrls.push(resizedDataUrl);
+                    const previewImg = document.createElement('img');
+                    previewImg.src = resizedDataUrl;
+                    previewImg.classList.add('photo-preview-item');
+                    photoPreviewsContainer.appendChild(previewImg);
+                };
+                img.src = e.target.result;
             };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
+            reader.readAsDataURL(file);
+        });
     });
 
     // --- フォーム処理 ---
@@ -308,7 +477,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const eventIndex = events.findIndex(event => event.id == eventId);
             if (eventIndex > -1) events[eventIndex] = { ...events[eventIndex], ...eventData };
         } else {
-            events.push({ id: Date.now(), ...eventData, memory: null, isScrapbooked: false, photoDataUrl: null });
+            events.push({ id: Date.now(), ...eventData, memory: null, isScrapbooked: false, photoDataUrls: [] });
         }
         saveEvents();
         renderAll();
@@ -338,17 +507,40 @@ document.addEventListener('DOMContentLoaded', () => {
     memoryForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const eventId = parseInt(document.getElementById('memory-event-id').value);
-        const memoryText = document.getElementById('memory-text').value;
-        const photoDataUrlToSave = resizedPhotoDataUrl;
+        const photoDataUrlsToSave = [...currentPhotoDataUrls]; // 配列をコピー
+
+        let memoryContent = "";
+        const qaContainer = memoryForm.querySelector('#qa-container');
+        if (qaContainer) {
+            const textareas = qaContainer.querySelectorAll('textarea');
+            textareas.forEach(textarea => {
+                const question = textarea.dataset.question;
+                const answer = textarea.value.trim();
+                if (answer) {
+                    memoryContent += `Q: ${question}\nA: ${answer}\n\n`;
+                }
+            });
+        }
+        memoryContent = memoryContent.trim(); // 末尾の改行削除
+
         const eventIndex = events.findIndex(event => event.id === eventId);
-        if (eventIndex > -1 && memoryText) {
-            events[eventIndex].memory = memoryText;
+        // Q&Aの回答が入力されている場合のみ保存
+        if (eventIndex > -1 && memoryContent) {
+            events[eventIndex].memory = memoryContent; // Q&Aテキストを保存
             events[eventIndex].isScrapbooked = true;
-            events[eventIndex].photoDataUrl = photoDataUrlToSave;
+            events[eventIndex].photoDataUrls = photoDataUrlsToSave; // 写真の配列を保存
             saveEvents();
             renderAll();
+            closeModal(memoryModal);
+        } else if (eventIndex > -1 && !memoryContent && photoDataUrlsToSave.length > 0) {
+             // 写真はあるがテキストがない場合（今回はテキスト必須とする）
+             alert("思い出を入力してください。");
+             return; // モーダルを閉じない
+        } else if (eventIndex > -1 && !memoryContent){
+            // テキストも写真もない場合
+             alert("思い出を入力してください。");
+             return; // モーダルを閉じない
         }
-        closeModal(memoryModal);
     });
 
     // --- タイムライン削除処理 ---
